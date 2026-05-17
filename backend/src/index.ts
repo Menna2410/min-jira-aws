@@ -4,8 +4,7 @@ import { loadConfig } from "./config.js";
 const cfg = loadConfig();
 const app = createApp(cfg);
 
-const server = app.listen(cfg.PORT, () => {
-  // eslint-disable-next-line no-console
+const server = app.listen(cfg.PORT, "0.0.0.0", () => {
   console.log(`mini-jira-backend listening on :${cfg.PORT}`);
 });
 
