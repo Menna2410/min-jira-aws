@@ -41,6 +41,9 @@ const envSchema = z.object({
   DYNAMO_ATTR_AUDIT_SORT: z.string().default("AuditID"),
 
   S3_ORIGINALS_BUCKET: z.string().min(1),
+  /** When set + resize Lambda deployed, thumbnails use same basename with `.thumb.jpg` in this bucket (see lambdas/image-resize). */
+  S3_RESIZED_BUCKET: z
+    .preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().min(1).optional()),
   S3_UPLOAD_URL_TTL_SECONDS: z.coerce.number().default(3600),
 
   SNS_TASK_ASSIGNED_TOPIC_ARN: z.string().min(1),

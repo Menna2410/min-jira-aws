@@ -207,6 +207,11 @@ export const api = {
     });
   },
 
+  /** Presigned JPEG thumbnail (`S3_RESIZED_BUCKET`); 404 → use {@link getAttachmentUrl}. */
+  async getAttachmentThumbUrl(taskId: string): Promise<{ presigned: PresignedPayload }> {
+    return request(`/api/tasks/${encodeURIComponent(taskId)}/attachments/thumb-url`);
+  },
+
   /** Returns a GET presigned URL (string) nested in `{ presigned: { url } }` — shape matches backend */
   async getAttachmentUrl(taskId: string, key?: string): Promise<{ presigned: PresignedPayload }> {
     const q = key ? `?key=${encodeURIComponent(key)}` : "";

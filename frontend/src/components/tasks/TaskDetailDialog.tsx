@@ -100,8 +100,17 @@ export function TaskDetailDialog(props: Props) {
       return;
     }
     try {
-      const { presigned } = await api.getAttachmentUrl(t.taskId);
-      setImgUrl(presigned.url);
+      try {
+        const { presigned } = await api.getAttachmentThumbUrl(t.taskId);
+        setImgUrl(presigned.url);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          const { presigned } = await api.getAttachmentUrl(t.taskId);
+          setImgUrl(presigned.url);
+        } else {
+          throw e;
+        }
+      }
     } catch {
       setImgUrl(null);
     }

@@ -211,4 +211,22 @@ function mountTasks(r: Router, ctx: RouteCtx) {
     const presigned = await ctx.s3.presignGet(key);
     return res.json({ presigned });
   });
+
+  /** Presigned GET for resized JPEG (requires S3_RESIZED_BUCKET + image-resize Lambda). */
+  r.get("/api/tasks/:taskId/attachments/thumb-url", async (req: AuthedRequest, res) => {
+    const task = await ctx.tasks.getForUser(req.user!, routeParam(req.params.taskId));
+    if (!task.imageCurrentKey) {
+      throw new HttpError(404, "No attachment for this task");
+    }
+    const prefix = `tasks/${task.taskId}/`;
+    if (!task.imageCurrentKey.startsWith(prefix)) {
+      throw new HttpError(400, "Invalid attachment key for this task");
+    }
+    if (!ctx.s3.resizedBucketConfigured()) {
+      throw new HttpError(404, "Thumbnails not configured");
+    }
+    const presigned = await ctx.s3.presignGetThumbnail(task.imageCurrentKey);
+    if (!presigned) throw new HttpError(404, "Thumbnails not configured");
+    return res.json({ presigned });
+  });
 }
