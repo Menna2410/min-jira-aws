@@ -1,0 +1,14 @@
+{
+  "name": "mini-jira-daily-digest",
+  "private": true,
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "package": "node ./scripts/make-zip.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.826.0",
+    "@aws-sdk/client-sns": "^3.826.0",
+    "@aws-sdk/lib-dynamodb": "^3.826.0"
+  }
+}

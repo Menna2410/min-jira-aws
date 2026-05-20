@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "main": "handler.cjs",
+  "scripts": {
+    "package": "node ./scripts/make-zip.mjs"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.826.0",
     "jimp": "^0.22.12"
