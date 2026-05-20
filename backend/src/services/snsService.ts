@@ -25,6 +25,10 @@ export function snsService(cfg: AppConfig) {
           TopicArn: topicArn,
           Subject: `New task assigned: ${event.title}`,
           Message: message,
+          MessageAttributes: {
+            type: { DataType: "String", StringValue: event.type },
+            AssigneeEmail: { DataType: "String", StringValue: event.assigneeEmail },
+          },
         }),
       );
     },
