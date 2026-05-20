@@ -7,6 +7,7 @@ import { createCognitoVerifier } from "./lib/cognitoVerifier.js";
 import { cognitoAuthMiddleware, type AuthedRequest } from "./middleware/cognitoAuth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { teamsService } from "./services/teamsService.js";
+import { cognitoAdminService } from "./services/cognitoAdmin.js";
 import { usersService } from "./services/usersService.js";
 import { projectsService } from "./services/projectsService.js";
 import { snsService } from "./services/snsService.js";
@@ -22,7 +23,8 @@ export function createApp(cfg: AppConfig) {
   const verifier = createCognitoVerifier(cfg);
 
   const teams = teamsService(doc, cfg);
-  const users = usersService(doc, cfg);
+  const cognitoAdmin = cognitoAdminService(cfg);
+  const users = usersService(doc, cfg, cognitoAdmin);
   const projects = projectsService(doc, cfg);
   const sns = snsService(cfg);
   const cw = cloudWatchService(cfg);

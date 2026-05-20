@@ -93,6 +93,16 @@ export const api = {
     return request("/api/users");
   },
 
+  async updateUser(
+    userId: string,
+    body: { teamId?: string | ""; role?: UserRecord["role"] },
+  ): Promise<{ user: UserRecord }> {
+    return request(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
   async listProjects(): Promise<{ projects: ProjectRecord[] }> {
     return request("/api/projects");
   },

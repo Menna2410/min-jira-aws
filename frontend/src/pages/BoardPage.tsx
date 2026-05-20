@@ -110,8 +110,8 @@ export function BoardPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Kanban workspace</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
-            Columns mirror the server-enforced statuses. Employees only promote tasks forward one lane at a time — try an
-            illegal jump for a reassuring error toast from the backend.
+            Columns mirror the server-enforced statuses. Employees see every task on their team; only assignees can drag
+            cards forward one lane at a time.
           </p>
           {viewerIsLead && (
             <p className="mt-2 max-w-xl text-xs text-zinc-500">

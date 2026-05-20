@@ -44,8 +44,14 @@ export function KanbanBoard({ tasks, viewer, loading, userLabel, onOpenTask, onM
   );
   const [activeTask, setActiveTask] = useState<TaskRecord | null>(null);
 
+  function employeeMayDrag(task: TaskRecord) {
+    if (!viewer || viewer.role !== "EMPLOYEE") return true;
+    return task.assigneeUserId === viewer.userId;
+  }
+
   async function commitMove(task: TaskRecord, target: TaskStatus) {
     if (task.status === target) return;
+    if (!employeeMayDrag(task)) return;
     if (viewer?.role === "EMPLOYEE" && !employeeCanMove(task.status, target)) return;
     await onMove(task.taskId, target);
   }
@@ -92,6 +98,7 @@ export function KanbanBoard({ tasks, viewer, loading, userLabel, onOpenTask, onM
               key={status}
               status={status}
               items={items}
+              viewer={viewer}
               userLabel={userLabel}
               onOpenTask={onOpenTask}
             />
@@ -112,11 +119,13 @@ export function KanbanBoard({ tasks, viewer, loading, userLabel, onOpenTask, onM
 function KanbanColumn({
   status,
   items,
+  viewer,
   userLabel,
   onOpenTask,
 }: {
   status: TaskStatus;
   items: TaskRecord[];
+  viewer: AuthUser | null;
   userLabel: (userId: string) => string;
   onOpenTask?: (task: TaskRecord) => void;
 }) {
@@ -144,7 +153,13 @@ function KanbanColumn({
           </p>
         ) : null}
         {items.map((task) => (
-          <KanbanCard key={task.taskId} task={task} userLabel={userLabel} onOpen={onOpenTask} />
+          <KanbanCard
+            key={task.taskId}
+            task={task}
+            viewer={viewer}
+            userLabel={userLabel}
+            onOpen={onOpenTask}
+          />
         ))}
       </div>
     </Card>
@@ -153,14 +168,21 @@ function KanbanColumn({
 
 function KanbanCard({
   task,
+  viewer,
   userLabel,
   onOpen,
 }: {
   task: TaskRecord;
+  viewer: AuthUser | null;
   userLabel: (userId: string) => string;
   onOpen?: (t: TaskRecord) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.taskId });
+  const draggable =
+    !viewer || viewer.role !== "EMPLOYEE" || task.assigneeUserId === viewer.userId;
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.taskId,
+    disabled: !draggable,
+  });
 
   const style: CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -170,15 +192,19 @@ function KanbanCard({
   return (
     <div ref={setNodeRef} style={style} className="touch-none">
       <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-3 shadow-inner">
-        <button
-          type="button"
-          {...listeners}
-          {...attributes}
-          className="-ml-1 flex items-start pt-1 text-zinc-500 hover:text-emerald-400"
-          aria-label="Drag task"
-        >
-          <GripVertical className="size-5" />
-        </button>
+        {draggable ? (
+          <button
+            type="button"
+            {...listeners}
+            {...attributes}
+            className="-ml-1 flex items-start pt-1 text-zinc-500 hover:text-emerald-400"
+            aria-label="Drag task"
+          >
+            <GripVertical className="size-5" />
+          </button>
+        ) : (
+          <span className="-ml-1 w-5 shrink-0" aria-hidden />
+        )}
         <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onOpen?.(task)}>
           <div className="flex flex-wrap items-center gap-2">
             <p className="line-clamp-2 font-medium leading-snug">{task.title}</p>

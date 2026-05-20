@@ -30,6 +30,12 @@ export function employeeCanMove(from: TaskStatus, to: TaskStatus) {
   return j === i + 1;
 }
 
+export function employeeNextStatus(from: TaskStatus): TaskStatus | null {
+  const i = TASK_STATUSES.indexOf(from);
+  if (i < 0 || i >= TASK_STATUSES.length - 1) return null;
+  return TASK_STATUSES[i + 1] ?? null;
+}
+
 export function priorityTone(priority: TaskPriority): "danger" | "warning" | "success" | "default" {
   if (priority === "CRITICAL") return "danger";
   if (priority === "HIGH") return "warning";

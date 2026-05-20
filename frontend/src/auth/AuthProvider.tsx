@@ -89,7 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         await getCurrentUser();
-        setAuthenticated(true);
+        const session = await fetchAuthSession();
+        if (!session.tokens?.idToken) {
+          setAuthenticated(false);
+        } else {
+          setAuthenticated(true);
+        }
       } catch {
         setAuthenticated(false);
       } finally {

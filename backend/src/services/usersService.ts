@@ -2,15 +2,19 @@ import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
 import { GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
+import { HttpError } from "../errors/HttpError.js";
+
 import type { AppConfig } from "../config.js";
 
 import type { AuthUser, UserRecord, Role } from "../types/index.js";
 
 import { userFromItem, userToItem } from "../lib/dynamoItemCodec.js";
 
+import type { CognitoAdminApi } from "./cognitoAdmin.js";
 
 
-export function usersService(doc: DynamoDBDocumentClient, cfg: AppConfig) {
+
+export function usersService(doc: DynamoDBDocumentClient, cfg: AppConfig, cognito?: CognitoAdminApi) {
 
   const table = cfg.DYNAMO_TABLE_USERS;
 
@@ -86,7 +90,11 @@ export function usersService(doc: DynamoDBDocumentClient, cfg: AppConfig) {
 
      */
 
-    async adminSetUserTeam(userId: string, teamId: string | undefined, role: Role): Promise<UserRecord> {
+    async adminSetUserTeam(
+      userId: string,
+      teamId: string | undefined,
+      role?: Role,
+    ): Promise<UserRecord> {
 
       const now = new Date().toISOString();
 
@@ -96,7 +104,7 @@ export function usersService(doc: DynamoDBDocumentClient, cfg: AppConfig) {
 
       if (!prev) {
 
-        throw new Error("User profile not found");
+        throw new HttpError(404, "User profile not found");
 
       }
 
@@ -106,13 +114,17 @@ export function usersService(doc: DynamoDBDocumentClient, cfg: AppConfig) {
 
         teamId,
 
-        role,
+        role: role ?? prev.role,
 
         updatedAt: now,
 
       };
 
       await doc.send(new PutCommand({ TableName: table, Item: userToItem(item, cfg) }));
+
+      if (cognito) {
+        await cognito.syncUserTeamId(item, teamId);
+      }
 
       return item;
 

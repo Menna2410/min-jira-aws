@@ -132,7 +132,7 @@ export function tasksService(doc: DynamoDBDocumentClient, cfg: AppConfig, deps: 
 
       }
 
-      if (task.teamId !== user.teamId || task.assigneeUserId !== user.userId) {
+      if (task.teamId !== user.teamId) {
 
         throw new HttpError(404, "Task not found");
 
@@ -226,15 +226,13 @@ export function tasksService(doc: DynamoDBDocumentClient, cfg: AppConfig, deps: 
 
               TableName: table,
 
-              IndexName: gsiAssignee,
+              IndexName: gsiTeam,
 
-              KeyConditionExpression: "#a = :aid",
+              KeyConditionExpression: "#t = :tid",
 
-              FilterExpression: "#team = :tid",
+              ExpressionAttributeNames: { "#t": teamAttr },
 
-              ExpressionAttributeNames: { "#a": assigneeAttr, "#team": teamAttr },
-
-              ExpressionAttributeValues: { ":aid": user.userId, ":tid": user.teamId },
+              ExpressionAttributeValues: { ":tid": user.teamId },
 
               ExclusiveStartKey: startKey,
 

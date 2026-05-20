@@ -41,8 +41,8 @@ export function CreateTaskDialog({ open, onOpenChange, projects, users, onCreate
 
   const assignees = useMemo(() => {
     const teamId = selectedProject?.teamId;
-    if (!teamId) return users;
-    return users.filter((u) => u.role !== "EMPLOYEE" || u.teamId === teamId);
+    if (!teamId) return [];
+    return users.filter((u) => u.role === "EMPLOYEE" && u.teamId === teamId);
   }, [selectedProject?.teamId, users]);
 
   useEffect(() => {

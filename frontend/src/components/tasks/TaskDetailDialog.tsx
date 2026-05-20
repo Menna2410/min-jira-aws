@@ -30,7 +30,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isManagerLike } from "@/lib/rbac";
-import { STATUS_LABELS, TASK_STATUSES, priorityTone } from "@/lib/task-meta";
+import {
+  STATUS_LABELS,
+  TASK_STATUSES,
+  employeeNextStatus,
+  priorityTone,
+} from "@/lib/task-meta";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -53,7 +58,8 @@ export function TaskDetailDialog(props: Props) {
   const [comments, setComments] = useState<CommentRecord[]>([]);
   const [audit, setAudit] = useState<TaskAuditRecord[]>([]);
   const [busy, setBusy] = useState(false);
-  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [attachmentIsPdf, setAttachmentIsPdf] = useState(false);
   const [commentBody, setCommentBody] = useState("");
 
   const [draftTitle, setDraftTitle] = useState("");
@@ -94,32 +100,41 @@ export function TaskDetailDialog(props: Props) {
     }
   }
 
-  async function reloadImage(t: TaskRecord) {
+  async function reloadAttachment(t: TaskRecord) {
     if (!t.imageCurrentKey) {
-      setImgUrl(null);
+      setAttachmentUrl(null);
+      setAttachmentIsPdf(false);
       return;
     }
+    const isPdf = /\.pdf$/i.test(t.imageCurrentKey);
+    setAttachmentIsPdf(isPdf);
     try {
+      if (isPdf) {
+        const { presigned } = await api.getAttachmentUrl(t.taskId);
+        setAttachmentUrl(presigned.url);
+        return;
+      }
       try {
         const { presigned } = await api.getAttachmentThumbUrl(t.taskId);
-        setImgUrl(presigned.url);
+        setAttachmentUrl(presigned.url);
       } catch (e) {
         if (e instanceof ApiError && e.status === 404) {
           const { presigned } = await api.getAttachmentUrl(t.taskId);
-          setImgUrl(presigned.url);
+          setAttachmentUrl(presigned.url);
         } else {
           throw e;
         }
       }
     } catch {
-      setImgUrl(null);
+      setAttachmentUrl(null);
     }
   }
 
   useEffect(() => {
     if (!open || !task) return;
     void (async () => {
-      setImgUrl(null);
+      setAttachmentUrl(null);
+      setAttachmentIsPdf(false);
       try {
         const { task: t } = await api.getTask(task.taskId);
         setDetail(t);
@@ -131,7 +146,7 @@ export function TaskDetailDialog(props: Props) {
   }, [open, task?.taskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (open && detail) void reloadImage(detail);
+    if (open && detail) void reloadAttachment(detail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, detail?.taskId, detail?.imageCurrentKey]);
 
@@ -203,7 +218,7 @@ export function TaskDetailDialog(props: Props) {
       await putToPresigned(pres.presigned.url, file, contentType);
       const { task: updated } = await api.commitAttachment(t.taskId, pres.key);
       setDetail(updated);
-      toast.success("Image linked.");
+      toast.success("Attachment linked.");
       onChanged();
     } catch (e) {
       if (e instanceof ApiError) toast.error(e.message);
@@ -234,16 +249,18 @@ export function TaskDetailDialog(props: Props) {
     return userMap.get(id)?.displayName ?? userMap.get(id)?.email ?? id.slice(0, 8);
   }
 
-  const selectedProjectTeam = projects.find((p) => p.projectId === draftProjectId)?.teamId;
-  const teamScopedUsers = users.filter(
-    (u) => u.role !== "EMPLOYEE" || u.teamId === selectedProjectTeam,
-  );
-
   const d = detail;
   if (!d) return null;
 
+  const selectedProjectTeam =
+    projects.find((p) => p.projectId === draftProjectId)?.teamId ?? d.teamId;
+  const teamScopedUsers = users.filter(
+    (u) => u.role === "EMPLOYEE" && u.teamId === selectedProjectTeam,
+  );
+
   const canManage = isManagerLike(viewerRole);
   const isAssignee = d.assigneeUserId === viewerId;
+  const nextStatus = employeeNextStatus(d.status);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -356,9 +373,25 @@ export function TaskDetailDialog(props: Props) {
                       <dt className="text-xs uppercase tracking-wide text-zinc-500">Deadline</dt>
                       <dd className="font-mono text-xs">{format(new Date(d.deadline), "yyyy-MM-dd HH:mm")}</dd>
                     </div>
-                    <p className="text-xs text-zinc-500">
-                      Employees progress tasks one stage at a time from the board.
-                    </p>
+                    {isAssignee && nextStatus ? (
+                      <div className="pt-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void patchAndRefresh({ status: nextStatus })}
+                        >
+                          Move to {STATUS_LABELS[nextStatus]}
+                        </Button>
+                      </div>
+                    ) : null}
+                    {!isAssignee ? (
+                      <p className="text-xs text-zinc-500">
+                        View-only — only the assignee can change status or upload files.
+                      </p>
+                    ) : !nextStatus ? (
+                      <p className="text-xs text-zinc-500">This task is already done.</p>
+                    ) : null}
                   </dl>
                 )}
               </ScrollArea>
@@ -424,11 +457,11 @@ export function TaskDetailDialog(props: Props) {
                 <p className="text-sm text-zinc-500">Only managers or the assignee can upload.</p>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="file">Attach or replace image</Label>
+                  <Label htmlFor="file">Attach or replace file</Label>
                   <Input
                     id="file"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.pdf,application/pdf"
                     onChange={(ev) => {
                       const file = ev.target.files?.[0];
                       ev.target.value = "";
@@ -443,11 +476,27 @@ export function TaskDetailDialog(props: Props) {
                 <p className="text-xs text-zinc-500">Version snapshots: {d.imageVersions.length}</p>
               ) : null}
               <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
-                {imgUrl ? (
-                  <img src={imgUrl} alt="Task attachment" className="max-h-72 w-full object-contain" />
+                {attachmentUrl && attachmentIsPdf ? (
+                  <div className="flex flex-col gap-2 p-4">
+                    <a
+                      href={attachmentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-emerald-400 underline"
+                    >
+                      Open PDF attachment
+                    </a>
+                    <iframe
+                      title="Task PDF"
+                      src={attachmentUrl}
+                      className="h-72 w-full rounded border border-zinc-800 bg-white"
+                    />
+                  </div>
+                ) : attachmentUrl ? (
+                  <img src={attachmentUrl} alt="Task attachment" className="max-h-72 w-full object-contain" />
                 ) : (
                   <div className="flex h-40 items-center justify-center text-sm text-zinc-500">
-                    No image attached
+                    No attachment
                   </div>
                 )}
               </div>
@@ -468,9 +517,21 @@ export function TaskDetailDialog(props: Props) {
                 </Button>
               </>
             ) : (
-              <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
+              <div className="flex w-full flex-wrap justify-end gap-2">
+                {isAssignee && nextStatus ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => void patchAndRefresh({ status: nextStatus })}
+                  >
+                    {STATUS_LABELS[nextStatus]}
+                  </Button>
+                ) : null}
+                <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+                  Close
+                </Button>
+              </div>
             )}
           </DialogFooter>
         </Tabs>

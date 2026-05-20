@@ -51,6 +51,18 @@ function mountUsers(r: Router, ctx: RouteCtx) {
   r.get("/api/users", requireManagerLike(), async (_req: AuthedRequest, res) => {
     return res.json({ users: await ctx.users.listAssignable() });
   });
+
+  r.patch("/api/users/:userId", requireRoles("ADMIN"), async (req: AuthedRequest, res) => {
+    const body = z
+      .object({
+        teamId: z.union([z.string().min(1), z.literal("")]).optional(),
+        role: z.enum(["MANAGER", "EMPLOYEE", "ADMIN"]).optional(),
+      })
+      .parse(req.body);
+    const teamId = body.teamId === "" ? undefined : body.teamId;
+    const user = await ctx.users.adminSetUserTeam(routeParam(req.params.userId), teamId, body.role);
+    return res.json({ user });
+  });
 }
 
 function mountProjects(r: Router, ctx: RouteCtx) {

@@ -18,14 +18,14 @@ import { isManagerLike } from "@/lib/rbac";
 
 export function ShellLayout() {
   const navigate = useNavigate();
-  const { me, initialized, loadingMe, signOut } = useAuth();
+  const { me, initialized, signOut } = useAuth();
 
   async function logout() {
     await signOut();
     navigate("/login", { replace: true });
   }
 
-  if (!initialized || loadingMe || !me) {
+  if (!initialized || !me) {
     return (
       <div className="flex min-h-screen flex-col">
         <div className="border-b border-zinc-900 px-8 py-4">
