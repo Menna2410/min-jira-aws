@@ -2,7 +2,7 @@
 
 Live website: [https://d3oov1t31r602x.cloudfront.net](https://d3oov1t31r602x.cloudfront.net)
 
-Demo video: [mini-jira-demo.mov](docs/assets/mini-jira-demo.mov)
+Demo video: [Watch the demo video on Google Drive]([https://drive.google.com/drive/folders/1mF4noAtGuFMbjmgXZEY9Ksd7Gq7etXK9?usp=share_link](https://drive.google.com/drive/folders/1mF4noAtGuFMbjmgXZEY9Ksd7Gq7etXK9?usp=share_link))
 
 ## Architecture Diagram
 
